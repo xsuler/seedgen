@@ -28,6 +28,9 @@ def run(pc,seed):
     while pc:
         if pc in seeds and seeds[pc]==0:
             seeds[pc]=seed
+
+        flag=0
+
         # Build an instruction
         inst = Instruction()
 
@@ -53,6 +56,14 @@ def run(pc,seed):
         Triton.processing(inst)
 
         pc =Triton.getConcreteRegisterValue(Triton.registers.rip)
+        for seedr in seeds.values():
+            if seedr==0:
+                flag=1
+                break
+        if flag==0:
+            print("break")
+            break
+
 
 
 
@@ -139,6 +150,17 @@ def getSeeds(addrs,ENTRY):
 
     while worklist:
         # Take the first seed
+
+        flag=0
+        for seed in seeds.values():
+            if seed==0:
+                flag=1
+                break
+        if flag==0:
+            print("break")
+            break
+
+
         seed = worklist[0]
 
         # Symbolize inputs
