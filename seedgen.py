@@ -166,8 +166,8 @@ if __name__ == '__main__':
  
     ENTRY,binary=loadBinary(os.path.join(os.path.dirname(__file__), 'a.out'))
     func_spec={
-        "check":['==',1],
-        "check1":['==',1]
+        "check":['>',1],
+        "check1":['>',1]
     }
     func_addr_name_map={}
     for func in func_spec:
@@ -181,6 +181,7 @@ if __name__ == '__main__':
     for addr,seed in ret.items():
         res[func_addr_name_map[addr]]=seed
 
+    print(addrs)
     print(res)
 
     sys.exit(0)
