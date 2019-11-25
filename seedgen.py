@@ -26,7 +26,7 @@ def loadBinary(path):
 def run(pc,seed):
     global seeds
     while pc:
-        if pc in seeds:
+        if pc in seeds and seeds[pc]==0:
             seeds[pc]=seed
         # Build an instruction
         inst = Instruction()
@@ -127,13 +127,14 @@ def symbolizeInputs(seed):
 
 
 def getSeeds(addrs,ENTRY):
+    global seeds
     # Set the architecture
     Triton.setMode(MODE.ALIGNED_MEMORY, True)
 
     # We start the execution with a random value located at 0x1000.
     lastInput = list()
     worklist  = list([{0x1000:0x64}])
-    for addr in addrs:
+    for addr in addrs.values():
         seeds[addr]=0
 
     while worklist:
@@ -166,8 +167,8 @@ if __name__ == '__main__':
  
     ENTRY,binary=loadBinary(os.path.join(os.path.dirname(__file__), 'a.out'))
     func_spec={
-        "check":['>',1],
-        "check1":['>',1]
+        "check":['==',2],
+        "check1":['==',2]
     }
     func_addr_name_map={}
     for func in func_spec:
@@ -176,12 +177,14 @@ if __name__ == '__main__':
     for func,sp in func_spec.items():
         spec[binary.get_function_address(func)]=sp
     addrs=get_address(spec)
+    rev_addrs={}
+    for addr,raddr in addrs.items():
+        rev_addrs[raddr]=addr
     ret=getSeeds(addrs,ENTRY)
     res={}
     for addr,seed in ret.items():
-        res[func_addr_name_map[addr]]=seed
+        res[func_addr_name_map[rev_addrs[addr]]]=seed
 
     print(addrs)
     print(res)
 
-    sys.exit(0)
