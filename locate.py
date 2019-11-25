@@ -49,11 +49,15 @@ def run(pc,func_spec):
             addr=inst.getOperands()[0].getValue()
             if addr in func_spec:
                 last_op=addr
-                if func_spec[addr][0]=='==':
+                if func_spec[addr][0]in ["==",">=","<="]:
                     Triton.setConcreteRegisterValue(Triton.registers.rax,func_spec[addr][1])
-                    flag=1
-                    pc+=5
-                    continue
+                if func_spec[addr][0]=='>':
+                    Triton.setConcreteRegisterValue(Triton.registers.rax,func_spec[addr][1]+1)
+                if func_spec[addr][0]=='<':
+                    Triton.setConcreteRegisterValue(Triton.registers.rax,func_spec[addr][1]-1)
+                flag=1
+                pc+=5
+                continue
 
         if flag==2:
             addrs[last_op]=pc
