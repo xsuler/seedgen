@@ -221,9 +221,31 @@ def __free(ctx):
     print("________________free")
     return 0
 
+def __fgets(ctx):
 
+    # Get arguments
+    arg1 =ctx.getConcreteRegisterValue(ctx.registers.rdi)
+    arg2 =ctx.getConcreteRegisterValue(ctx.registers.rsi)
 
+    indx = 0
+    #user = raw_input("")[:arg2]
+    user = "blah blah"
 
+    for c in user:
+        mem = MemoryAccess(arg1 + indx, CPUSIZE.BYTE)
+        ctx.setConcreteMemoryValue(mem, ord(c))
+        indx += 1
+
+    # Return value
+    return arg1
+
+def __fopen(ctx):
+    print("sssssssssssssss")
+    return 1
+
+def __fclose(ctx):
+    print("sssssssssssssss")
+    return 1
 
 customRelocation = [
     ('__libc_start_main', libcMainHandler, BASE_PLT + 0),
@@ -231,7 +253,9 @@ customRelocation = [
     ('printf',            printfHandler,   BASE_PLT + 2),
     ('putchar',           putcharHandler,  BASE_PLT + 3),
     ('puts',              putsHandler,     BASE_PLT + 4),
-    ('strncpy',           strncpyHandler,  BASE_PLT + 5),
     ('malloc',            __malloc,        BASE_PLT+6),
     ('free',            __free,        BASE_PLT+7),
+    ('fgets',            __fgets,        BASE_PLT+8),
+    ('fopen',            __fopen,        BASE_PLT+9),
+    ('fclose',            __fclose,        BASE_PLT+10),
 ]

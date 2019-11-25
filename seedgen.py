@@ -13,12 +13,14 @@ seeds={}
 
 
 def loadBinary(path):
+    global protocol_addr
     binary = lief.parse(path)
     phdrs  = binary.segments
     for phdr in phdrs:
         size   = phdr.physical_size
         vaddr  = phdr.virtual_address
         Triton.setConcreteMemoryAreaValue(vaddr, phdr.content)
+    # makeRelocation(Triton, binary)
     return binary.get_function_address("main"),binary
 
 
@@ -39,7 +41,10 @@ def run(pc,seed):
 
         inst.setOpcode(opcode)
         inst.setAddress(pc)
+
+
         arr=[elem.encode("hex") for elem in inst.getOpcode()]
+
         if arr[:4]==['f3', '0f', '1e', 'fa']:
             print("here")
             pc+=4
@@ -55,6 +60,7 @@ def run(pc,seed):
 
         Triton.processing(inst)
 
+        # hookingHandler(Triton)
         pc =Triton.getConcreteRegisterValue(Triton.registers.rip)
         for seedr in seeds.values():
             if seedr==0:
@@ -63,8 +69,6 @@ def run(pc,seed):
         if flag==0:
             print("break")
             break
-
-
 
 
 # This function initializes the context memory.
@@ -128,6 +132,7 @@ def getNewInput():
 def symbolizeInputs(seed):
     Triton.concretizeAllRegister()
     Triton.concretizeAllMemory()
+
     for address, value in list(seed.items()):
         Triton.setConcreteMemoryValue(MemoryAccess(address, 1), value)
         for i in range(100):
@@ -184,8 +189,7 @@ def getSeeds(addrs,ENTRY):
 
 if __name__ == '__main__':
     Triton.setArchitecture(ARCH.X86_64)
-
-    # Symbolic optimization
+    Triton.setMode(MODE.ALIGNED_MEMORY, True)
  
     ENTRY,binary=loadBinary(os.path.join(os.path.dirname(__file__), 'a.out'))
     func_spec={
@@ -199,6 +203,7 @@ if __name__ == '__main__':
     for func,sp in func_spec.items():
         spec[binary.get_function_address(func)]=sp
     addrs=get_address(spec)
+    print(addrs)
     rev_addrs={}
     for addr,raddr in addrs.items():
         rev_addrs[raddr]=addr

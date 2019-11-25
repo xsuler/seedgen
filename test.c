@@ -15,25 +15,35 @@ int check(char *ptr)
 
 int check1(char *ptr)
 {
-  if(((*ptr)!=0)&&strncmp(ptr,"asdk",4)==0){
+  if(((*ptr)!=0)&&strncmp(ptr,"bsdk",4)==0){
     return 2;
   }
   return 0;
 }
 
+void protocol(char *ptr){
+  if(check(ptr)>1){
+    printf("%d",1);
+  }else{
+    printf("%d",2);
+  }
+
+  if(check1(ptr)==2){
+    printf("%d",1);
+  }else{
+    printf("%d",2);
+  }
+}
+
 int main(int ac, char **av){
 
-  if(check(av[1])>1){
-    printf("%d",1);
-  }else{
-    printf("%d",2);
-  }
+  FILE *fp;
+  char str[100];
+  char* filename = "./input";
+  fp=fopen(filename,"r");
+  /* fclose(fp); */
+  printf("%s", str);
 
-  if(check1(av[1])==2){
-    printf("%d",1);
-  }else{
-    printf("%d",2);
-  }
-
+  protocol(av[1]);
   return 0;
 }
