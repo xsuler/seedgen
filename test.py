@@ -19,7 +19,6 @@ def loadBinary(path):
         size   = phdr.physical_size
         vaddr  = phdr.virtual_address
         Triton.setConcreteMemoryAreaValue(vaddr, phdr.content)
-    # makeRelocation(Triton, binary)
     return binary.get_function_address("main"),binary
 
 
@@ -53,7 +52,6 @@ def run(pc,seed):
 
         Triton.processing(inst)
 
-        # hookingHandler(Triton)
         pc =Triton.getConcreteRegisterValue(Triton.registers.rip)
 
 
