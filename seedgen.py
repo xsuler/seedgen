@@ -11,7 +11,6 @@ import lief
 Triton = TritonContext()
 seeds={}
 
-
 def loadBinary(path):
     global protocol_addr
     binary = lief.parse(path)
@@ -21,7 +20,7 @@ def loadBinary(path):
         vaddr  = phdr.virtual_address
         Triton.setConcreteMemoryAreaValue(vaddr, phdr.content)
     # makeRelocation(Triton, binary)
-    return binary.get_function_address("main"),binary
+    return binary.get_function_address("protocol"),binary
 
 
 # This function emulates the code.
@@ -44,7 +43,6 @@ def run(pc,seed):
 
 
         arr=[elem.encode("hex") for elem in inst.getOpcode()]
-
         if arr[:4]==['f3', '0f', '1e', 'fa']:
             print("here")
             pc+=4
@@ -75,10 +73,11 @@ def run(pc,seed):
 def initContext():
     # Point RDI on our buffer. The address of our buffer is arbitrary. We just need
     # to point the RDI register on it as first argument of our targeted function.
-    Triton.setConcreteMemoryValue(0x900008, 0x00)
-    Triton.setConcreteMemoryValue(0x900009, 0x10)
+    # Triton.setConcreteMemoryValue(0x900008, 0x00)
+    # Triton.setConcreteMemoryValue(0x900009, 0x10)
 
-    Triton.setConcreteRegisterValue(Triton.registers.rsi, 0x900000)
+    # Triton.setConcreteRegisterValue(Triton.registers.rsi, 0x900000)
+    Triton.setConcreteRegisterValue(Triton.registers.rdi, 0x1000)
 
     # Setup stack on an abitrary address.
     Triton.setConcreteRegisterValue(Triton.registers.rsp, 0x7fffffff)

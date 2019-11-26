@@ -42,8 +42,9 @@ int main(int ac, char **av){
   char* filename = "./input";
   fp=fopen(filename,"r");
   /* fclose(fp); */
-  printf("%s", str);
+  fgets(str,10,fp);
+  /* printf("%s", str); */
 
-  protocol(av[1]);
+  protocol(str);
   return 0;
 }
