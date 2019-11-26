@@ -10,6 +10,8 @@ import lief
 
 Triton = TritonContext()
 seeds={}
+entry_name=""
+protocol_type=0
 
 def loadBinary(path):
     global protocol_addr
@@ -20,7 +22,7 @@ def loadBinary(path):
         vaddr  = phdr.virtual_address
         Triton.setConcreteMemoryAreaValue(vaddr, phdr.content)
     # makeRelocation(Triton, binary)
-    return binary.get_function_address("protocol"),binary
+    return binary.get_function_address(entry_name),binary
 
 
 # This function emulates the code.
@@ -73,11 +75,13 @@ def run(pc,seed):
 def initContext():
     # Point RDI on our buffer. The address of our buffer is arbitrary. We just need
     # to point the RDI register on it as first argument of our targeted function.
-    # Triton.setConcreteMemoryValue(0x900008, 0x00)
-    # Triton.setConcreteMemoryValue(0x900009, 0x10)
+    if protocol_type==0:
+        Triton.setConcreteMemoryValue(0x900008, 0x00)
+        Triton.setConcreteMemoryValue(0x900009, 0x10)
 
-    # Triton.setConcreteRegisterValue(Triton.registers.rsi, 0x900000)
-    Triton.setConcreteRegisterValue(Triton.registers.rdi, 0x1000)
+        Triton.setConcreteRegisterValue(Triton.registers.rsi, 0x900000)
+    elif protocol_type==1:
+        Triton.setConcreteRegisterValue(Triton.registers.rdi, 0x1000)
 
     # Setup stack on an abitrary address.
     Triton.setConcreteRegisterValue(Triton.registers.rsp, 0x7fffffff)
@@ -189,6 +193,17 @@ def getSeeds(addrs,ENTRY):
 if __name__ == '__main__':
     Triton.setArchitecture(ARCH.X86_64)
     Triton.setMode(MODE.ALIGNED_MEMORY, True)
+
+    if sys.argv[1]=="-argv":
+        entry_name="main"
+        protocol_type=0
+    elif sys.argv[1]=="-protocol":
+        entry_name="protocol"
+        protocol_type=1
+    elif sys.argv[1]=="-read":
+        entry_name="main"
+        protocol_type=2
+
  
     ENTRY,binary=loadBinary(os.path.join(os.path.dirname(__file__), 'a.out'))
     func_spec={
