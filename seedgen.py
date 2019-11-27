@@ -203,10 +203,10 @@ if __name__ == '__main__':
 
 
     ENTRY,binary=loadBinary(os.path.join(os.path.dirname(__file__), 'a.out'))
-    func_spec={
-        "check":['==',2],
-        "check1":['==',2]
-    }
+    import imp
+
+    spec = imp.load_source('name', './spec.py')
+    func_spec=spec.func_spec
     func_addr_name_map={}
     for func in func_spec:
         func_addr_name_map[binary.get_function_address(func)]=func
