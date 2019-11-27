@@ -18,7 +18,7 @@ def loadBinary(path):
         vaddr  = phdr.virtual_address
         Triton.setConcreteMemoryAreaValue(vaddr, phdr.content)
     # makeRelocation(Triton, binary)
-    return binary.get_function_address("main")
+    return binary.get_function_address("protocol")
 
 
 # This function emulates the code.
