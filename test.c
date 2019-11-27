@@ -21,7 +21,7 @@ int check1(char *ptr)
   return 0;
 }
 
-void protocol(char *ptr){
+void protoco(char *ptr){
   if(check(ptr)>1){
     printf("%d",1);
   }else{
@@ -42,9 +42,9 @@ int main(int ac, char **av){
   char* filename = "./input";
   fp=fopen(filename,"r");
   /* fclose(fp); */
-  fgets(str,10,fp);
+  /* fgets(str,10,fp); */
   /* printf("%s", str); */
 
-  protocol(str);
+  protoco(av[1]);
   return 0;
 }

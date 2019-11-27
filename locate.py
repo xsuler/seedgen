@@ -9,6 +9,7 @@ import lief
 Triton = TritonContext()
 
 addrs={}
+option=0
 
 def loadBinary(path):
     binary = lief.parse(path)
@@ -18,7 +19,10 @@ def loadBinary(path):
         vaddr  = phdr.virtual_address
         Triton.setConcreteMemoryAreaValue(vaddr, phdr.content)
     # makeRelocation(Triton, binary)
-    return binary.get_function_address("protocol")
+    if option==1:
+        return binary.get_function_address("protocol")
+    else:
+        return binary.get_function_address("main")
 
 
 # This function emulates the code.
@@ -140,7 +144,9 @@ def symbolizeInputs(seed):
     return
 
 
-def get_address(func_spec):
+def get_address(func_spec,optionr):
+    global option
+    option=optionr
     # Set the architecture
     Triton.setArchitecture(ARCH.X86_64)
 

@@ -213,7 +213,7 @@ if __name__ == '__main__':
     spec={}
     for func,sp in func_spec.items():
         spec[binary.get_function_address(func)]=sp
-    addrs=get_address(spec)
+    addrs=get_address(spec,protocol_type)
     rev_addrs={}
     for addr,raddr in addrs.items():
         rev_addrs[raddr]=addr
