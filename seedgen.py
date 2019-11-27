@@ -46,7 +46,6 @@ def run(pc,seed):
 
         arr=[elem.encode("hex") for elem in inst.getOpcode()]
         if arr[:4]==['f3', '0f', '1e', 'fa']:
-            print("here")
             pc+=4
             continue
         if arr[:3]==['0f', '01', 'd0']:
@@ -67,7 +66,6 @@ def run(pc,seed):
                 flag=1
                 break
         if flag==0:
-            print("break")
             break
 
 
@@ -165,7 +163,6 @@ def getSeeds(addrs,ENTRY):
                 flag=1
                 break
         if flag==0:
-            print("break")
             break
 
 
@@ -204,7 +201,7 @@ if __name__ == '__main__':
         entry_name="main"
         protocol_type=2
 
- 
+
     ENTRY,binary=loadBinary(os.path.join(os.path.dirname(__file__), 'a.out'))
     func_spec={
         "check":['==',2],
@@ -217,7 +214,6 @@ if __name__ == '__main__':
     for func,sp in func_spec.items():
         spec[binary.get_function_address(func)]=sp
     addrs=get_address(spec)
-    print(addrs)
     rev_addrs={}
     for addr,raddr in addrs.items():
         rev_addrs[raddr]=addr
@@ -226,6 +222,5 @@ if __name__ == '__main__':
     for addr,seed in ret.items():
         res[func_addr_name_map[rev_addrs[addr]]]=seed
 
-    print(addrs)
     print(res)
 
