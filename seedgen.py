@@ -220,6 +220,9 @@ if __name__ == '__main__':
     ret=getSeeds(addrs,ENTRY)
     res={}
     for addr,seed in ret.items():
+        for adr,bina in seed.items():
+            seed[adr-0x1000]=bina
+            seed.pop(adr)
         res[func_addr_name_map[rev_addrs[addr]]]=seed
 
     print(res)

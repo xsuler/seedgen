@@ -21,7 +21,7 @@ int check1(char *ptr)
   return 0;
 }
 
-void protoco(char *ptr){
+void protocol(char *ptr){
   if(check(ptr)>1){
     printf("%d",1);
   }else{
@@ -45,6 +45,6 @@ int main(int ac, char **av){
   /* fgets(str,10,fp); */
   /* printf("%s", str); */
 
-  protoco(av[1]);
+  protocol(str);
   return 0;
 }
