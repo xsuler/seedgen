@@ -55,10 +55,64 @@ def run(pc,seed):
         if arr[0]=='f4':
             print("abort")
             break
+        if arr[0]=='e8':
+            offset=0
+            offset+=int(arr[4],16)
+            offset=offset<<8
+            offset+=int(arr[3],16)
+            offset=offset<<8
+            offset+=int(arr[2],16)
+            offset=offset<<8
+            offset+=int(arr[1],16)
+            faddr=offset+pc+5
+            faddr=faddr&0xffffffff
+
+            try:
+                fclose_addr=binary.get_function_address("fclose")
+                if fclose_addr==faddr:
+                    pc+=5
+                    continue
+            except:
+                pass
+
+            try:
+               fgets_addr=binary.get_function_address("fgets")
+               if fgets_addr==faddr:
+                    pc+=5
+                    continue
+            except:
+                pass
+
+            try:
+               fread_addr=binary.get_function_address("fread")
+               if fread_addr==faddr:
+                    pc+=5
+                    continue
+            except:
+                pass
+
+            try:
+               fprintf_addr=binary.get_function_address("printf")
+               if fprintf_addr==faddr:
+                    pc+=5
+                    continue
+            except:
+                pass
+
+            try:
+               fprintf_addr=binary.get_function_address("fprintf")
+               if fprintf_addr==faddr:
+                    pc+=5
+                    continue
+            except:
+                pass
+
 
         # Setup Address
 
         Triton.processing(inst)
+        print(str(hex(pc))+" path: "+str(Triton.getPathConstraints()))
+
 
         # hookingHandler(Triton)
         pc =Triton.getConcreteRegisterValue(Triton.registers.rip)
@@ -68,6 +122,95 @@ def run(pc,seed):
                 break
         if flag==0:
             break
+
+def runR(pc,binary):
+    seed={}
+    while pc:
+        # Build an instruction
+        inst = Instruction()
+
+        # Setup opcode
+        opcode=Triton.getConcreteMemoryAreaValue(pc, 16)
+
+        inst.setOpcode(opcode)
+        inst.setAddress(pc)
+
+        arr=[elem.encode("hex") for elem in inst.getOpcode()]
+        # endbr64
+        if arr[:4]==['f3', '0f', '1e', 'fa']:
+            pc+=4
+            continue
+        if arr[:3]==['0f', '01', 'd0']:
+            pc+=3
+            continue
+        if arr[0]=='f4':
+            print("abort")
+            break
+
+        if arr[0]=='e8':
+            offset=0
+            offset+=int(arr[4],16)
+            offset=offset<<8
+            offset+=int(arr[3],16)
+            offset=offset<<8
+            offset+=int(arr[2],16)
+            offset=offset<<8
+            offset+=int(arr[1],16)
+            faddr=offset+pc+5
+            faddr=faddr&0xffffffff
+
+            try:
+                fclose_addr=binary.get_function_address("fclose")
+                if fclose_addr==faddr:
+                    print("close!!")
+                    pc+=5
+                    continue
+            except:
+                pass
+
+            try:
+               fgets_addr=binary.get_function_address("fgets")
+               if fgets_addr==faddr:
+                    adr=Triton.getConcreteRegisterValue(Triton.registers.rdi)
+                    num=Triton.getConcreteRegisterValue(Triton.registers.rsi)
+                    for i in range(num):
+                        seed[adr+i]=0
+
+                    pc+=5
+                    break
+            except:
+                pass
+
+            try:
+               fread_addr=binary.get_function_address("fread")
+               if fread_addr==faddr:
+                    adr=Triton.getConcreteRegisterValue(Triton.registers.rdi)
+                    num=Triton.getConcreteRegisterValue(Triton.registers.rsi)*Triton.getConcreteRegisterValue(Triton.registers.rdx)
+                    for i in range(num):
+                        seed[adr+i]=0
+
+                    pc+=5
+                    break
+            except:
+                pass
+            try:
+               fprintf_addr=binary.get_function_address("fprintf")
+               if fprintf_addr==faddr:
+                    pc+=5
+                    continue
+            except:
+                pass
+
+
+
+        # Setup Address
+
+        Triton.processing(inst)
+
+        # hookingHandler(Triton)
+        pc =Triton.getConcreteRegisterValue(Triton.registers.rip)
+    return seed
+
 
 
 # This function initializes the context memory.
@@ -141,19 +284,27 @@ def symbolizeInputs(seed):
             Triton.symbolizeMemory(MemoryAccess(address+i, 1))
     return
 
+def find_fgets_seed(ENTRY,binary):
+    initContext()
+    seed=runR(ENTRY,binary)
+    return seed
 
 
 
-def getSeeds(addrs,ENTRY):
+def getSeeds(addrs,ENTRY,binary):
     global seeds
     # Set the architecture
     Triton.setMode(MODE.ALIGNED_MEMORY, True)
 
     # We start the execution with a random value located at 0x1000.
     lastInput = list()
-    worklist  = list([{0x1000:0x64}])
+    if protocol_type==2:
+        worklist=[find_fgets_seed(ENTRY,binary)]
+    else:
+        worklist  = list([{0x1000:0x64}])
     for addr in addrs.values():
         seeds[addr]=0
+
 
     while worklist:
         # Take the first seed
@@ -168,6 +319,7 @@ def getSeeds(addrs,ENTRY):
 
 
         seed = worklist[0]
+        print(seed)
 
         # Symbolize inputs
         symbolizeInputs(seed)
@@ -198,7 +350,7 @@ if __name__ == '__main__':
     elif sys.argv[1]=="-protocol":
         entry_name="protocol"
         protocol_type=1
-    elif sys.argv[1]=="-read":
+    elif sys.argv[1]=="-fgets":
         entry_name="main"
         protocol_type=2
 
@@ -214,11 +366,13 @@ if __name__ == '__main__':
     spec={}
     for func,sp in func_spec.items():
         spec[binary.get_function_address(func)]=sp
-    addrs=get_address(spec,protocol_type)
+    addrs=get_address(spec,protocol_type,binary,sys.argv[2])
+    print("addrs:")
+    print(addrs)
     rev_addrs={}
     for addr,raddr in addrs.items():
         rev_addrs[raddr]=addr
-    ret=getSeeds(addrs,ENTRY)
+    ret=getSeeds(addrs,ENTRY,binary)
     res={}
     for addr,seed in ret.items():
         for adr,bina in seed.items():

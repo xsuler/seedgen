@@ -3,11 +3,10 @@
 #include <stdlib.h>
 
 
-char *serial = "\x31\x3e\x3d\x26\x31";
 
 int check(char *ptr)
 {
-  if((*ptr!=0)&&strcmp(ptr,"asd")==0){
+  if((*ptr!=0)&&strncmp(ptr,"1234455",7)==0){
     return 2;
   }
   return 0;
@@ -22,13 +21,8 @@ int check1(char *ptr)
 }
 
 void protocol(char *ptr){
-  if(check(ptr)>1){
-    printf("%d",1);
-  }else{
-    printf("%d",2);
-  }
 
-  if(check1(ptr)==2){
+  if(check(ptr)==2){
     printf("%d",1);
   }else{
     printf("%d",2);
@@ -41,9 +35,18 @@ int main(int ac, char **av){
   char str[100];
   char* filename = "./input";
   fp=fopen(filename,"r");
-  /* fclose(fp); */
-  /* fgets(str,10,fp); */
-  /* printf("%s", str); */
+
+  char buf0[100];
+  fread(buf0,1,3,fp);
+  memcpy(str,buf0,3);
+  fread(buf0,1,4,fp);
+  memcpy(str+3,buf0,4);
+
+  char buf[100];
+  fmemopen(buf,10,"rb");
+
+  printf("%s", str);
+  fclose(fp);
 
   protocol(str);
   return 0;
