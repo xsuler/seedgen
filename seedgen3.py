@@ -89,20 +89,16 @@ def run(pc, seed):
                 if fopen_addr == faddr:
                     mode = Triton.getConcreteRegisterValue(
                         Triton.registers.rsi)
-                    print("setted 0")
                     buf_addr = 0x1000
                     size = 100
                     Triton.setConcreteRegisterValue(Triton.registers.rdi,
                                                     buf_addr)
                     Triton.setConcreteRegisterValue(Triton.registers.rsi, size)
                     Triton.setConcreteRegisterValue(Triton.registers.rdx, mode)
-                    print("setted 1")
                     fmemopen_addr = gbinary.get_function_address("fmemopen")
-                    print("setted 2")
                     offset = fmemopen_addr - pc - 5
                     opcode = struct.pack("<B", 0xe8) + struct.pack(
                         "<I", offset)
-                    print("setted")
 
                     for i in range(size):
                         seed[0x1000 + i] = 10
@@ -128,7 +124,6 @@ def run(pc, seed):
                     continue
             except:
                 pass
-
 
             try:
                 fprintf_addr = gbinary.get_function_address("fprintf")
@@ -169,8 +164,6 @@ def run(pc, seed):
             except:
                 pass
 
-
-
             try:
                 fwrite_addr = gbinary.get_function_address("fwrite")
                 if fwrite_addr == faddr:
@@ -178,9 +171,6 @@ def run(pc, seed):
                     continue
             except:
                 pass
-
-
-
 
         inst.setOpcode(opcode)
         Triton.processing(inst)
