@@ -224,13 +224,10 @@ def simulate():
         seed = worklist[0]
         print("seed: " + str(seed))
 
-        # Symbolize inputs
         symbolizeInputs(seed)
 
-        # Init context memory
         initContext()
 
-        # Emulate
         lastInput += [dict(seed)]
         del worklist[0]
         run(ENTRY, seed)
