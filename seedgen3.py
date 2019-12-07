@@ -1,4 +1,5 @@
 from triton import TritonContext, ARCH, Instruction, MemoryAccess, CPUSIZE, MODE
+import imp
 import struct
 import copy
 import json
@@ -6,8 +7,12 @@ import sys
 import lief
 
 gbinary = ''
+addr_spec={}
 
 Triton = TritonContext()
+call_stack=[]
+func_error_seed={}
+addr_func={}
 
 
 def loadBinary(path):
@@ -62,7 +67,8 @@ def symbolizeInputs(seed):
 
 
 def run(pc, seed):
-    global flagr
+    global flagr,call_stack,func_error_seed
+    prev_seed=copy.deepcopy(seed)
     while pc:
         inst = Instruction()
 
@@ -84,6 +90,7 @@ def run(pc, seed):
             offset += int(arr[1], 16)
             faddr = offset + pc + 5
             faddr = faddr & 0xffffffff
+            call_stack.append(faddr)
             try:
                 fopen_addr = gbinary.get_function_address("fopen")
                 if fopen_addr == faddr:
@@ -186,6 +193,7 @@ def run(pc, seed):
             print("abort")
             break
 
+
         if arr[0] == '0xe8':
             offset = 0
             offset += int(arr[4], 16)
@@ -200,9 +208,33 @@ def run(pc, seed):
 
             print(str(hex(pc)) + " calling " + str(hex(faddr)))
 
+
+
+        if arr[0] == '0xc3':
+            if len(call_stack)>0:
+                if call_stack[-1] in addr_spec:
+                    raxv=Triton.getConcreteRegisterValue(Triton.registers.rax)
+                    if satisfy(raxv,addr_spec[call_stack[-1]]):
+                        print("satisfy")
+                        func_error_seed[call_stack[-1]]=prev_seed
+                call_stack.pop(-1)
+
         pc = Triton.getConcreteRegisterValue(Triton.registers.rip)
     return seed
 
+def satisfy(value,sp):
+    if sp[0] == '==':
+        return value==sp[1]
+    if sp[0] == '<':
+        return value<sp[1]
+    if sp[0] == '>':
+        return value>sp[1]
+    if sp[0] == '>=':
+        return value>=sp[1]
+    if sp[0] == '<=':
+        return value<=sp[1]
+    if sp[0] == '!=':
+        return value!=sp[1]
 
 def fix_keys(j):
     for k in copy.copy(j):
@@ -211,16 +243,37 @@ def fix_keys(j):
 
 
 def simulate():
+    global addr_spec,call_stack,addr_func
     Triton.setArchitecture(ARCH.X86_64)
     Triton.setMode(MODE.ALIGNED_MEMORY, True)
 
     ENTRY = loadBinary(sys.argv[1])
+
+    spec = imp.load_source('name', './spec.py')
+    func_spec=spec.func_spec
+
+    addr_spec={}
+    for func,sp in func_spec.items():
+        addr_spec[gbinary.get_function_address(func)]=sp
+
+    addr_func={}
+    for func in func_spec:
+        addr_func[gbinary.get_function_address(func)]=func
+
+
     lastInput = list()
     run(ENTRY, {})
     worklist = [{}]
 
     while worklist:
-        # Take the first seed
+
+        flag=0
+        for addr in addr_spec:
+            if addr not in func_error_seed:
+                flag=1
+        if flag==0:
+            break
+
         seed = worklist[0]
         print("seed: " + str(seed))
 
@@ -242,3 +295,12 @@ def simulate():
 
 
 simulate()
+ret={}
+for addr,func in addr_func.items():
+    seed=func_error_seed[addr]
+    n_seed={}
+    for adr,bina in seed.items():
+        n_seed[adr-0x1000]=bina
+    ret[func]=n_seed
+
+print("seed"+str(ret))

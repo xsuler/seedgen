@@ -1,4 +1,4 @@
 
 func_spec={
-"check1":["==",2]
+"jpeg_encode":["==",0]
     }

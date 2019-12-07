@@ -21,7 +21,6 @@ int check1(char *ptr)
 }
 
 void protocol(char *ptr){
-
   if(check(ptr)==2){
     printf("%d",1);
   }else{
