@@ -32,7 +32,7 @@ int main(int ac, char **av){
 
   FILE *fp;
   char str[100];
-  char* filename = "./input";
+  char* filename = av[1];
   fp=fopen(filename,"r");
 
   char buf0[100];

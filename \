@@ -1,4 +1,6 @@
 from triton import TritonContext, ARCH, Instruction, MemoryAccess, CPUSIZE, MODE
+import time
+import pybloomfilter
 
 import imp
 import struct
@@ -6,6 +8,7 @@ import copy
 import json
 import sys
 import lief
+import random
 
 gbinary = ''
 addr_spec={}
@@ -26,8 +29,10 @@ def loadBinary(path):
     gbinary = binary
     return binary.get_function_address("main")
 
+last_branch=set()
 
 def getNewInput():
+    global last_branch
     inputs = list()
     pco = Triton.getPathConstraints()
     astCtxt = Triton.getAstContext()
@@ -35,19 +40,25 @@ def getNewInput():
     for pc in pco:
         if pc.isMultipleBranches():
             branches = pc.getBranchConstraints()
+            addr=pc.getTakenAddress()
+            if addr in last_branch:
+                continue
+            last_branch.add(addr)
             for branch in branches:
                 if branch['isTaken'] == False:
-                    models = Triton.getModel(
-                        astCtxt.land(
+                    asts=(astCtxt.land(
                             [previousConstraints, branch['constraint']]))
+
+                    models = Triton.getModel(asts)
+
                     seed = dict()
                     for k, v in list(models.items()):
                         symVar = Triton.getSymbolicVariable(k)
                         seed.update({symVar.getOrigin(): v.getValue()})
                     if seed:
                         inputs.append(seed)
-        previousConstraints = astCtxt.land(
-            [previousConstraints, pc.getTakenPredicate()])
+        previousConstraints = (astCtxt.land(
+            [previousConstraints, pc.getTakenPredicate()]))
     Triton.clearPathConstraints()
     return inputs
 
@@ -79,10 +90,8 @@ def run(pc, seed):
         inst.setAddress(pc)
 
         arr = [hex(elem) for elem in opcode]
-
         if arr[:4] == ['0xf3', '0xf', '0x1e', '0xfa']:
             pc += 4
-            print("here")
             continue
         if arr[:3] == ['0xf', '0x1', '0xd0']:
             pc += 3
@@ -105,14 +114,13 @@ def run(pc, seed):
             faddr = faddr & 0xffffffff
             call_stack.append(faddr)
             try:
-                fopen_addr = gbinary.get_function_address("accept")
-                fileno_addr = gbinary.get_function_address("fileno")
+                fopen_addr = gbinary.get_function_address("fopen")
                 if fopen_addr == faddr:
-                    mode = 0x900000
-
-                    Triton.setConcreteMemoryValue(0x900000, 0x72)
+                    print("calling open")
+                    mode = Triton.getConcreteRegisterValue(
+                        Triton.registers.rsi)
                     buf_addr = 0x1000
-                    size = 100
+                    size = 10
                     Triton.setConcreteRegisterValue(Triton.registers.rdi,
                                                     buf_addr)
                     Triton.setConcreteRegisterValue(Triton.registers.rsi, size)
@@ -122,75 +130,16 @@ def run(pc, seed):
                     opcode = struct.pack("<B", 0xe8) + struct.pack(
                         "<I", offset)
 
-                    inst.setOpcode(opcode)
-                    Triton.processing(inst)
-
-                    offset = fileno_addr - pc - 5
-
-                    raxv = Triton.getConcreteRegisterValue(
-                        Triton.registers.rax)
-                    print("raxv "+str(raxv))
-                    Triton.setConcreteRegisterValue(Triton.registers.rdi,raxv)
-
-                    opcode = struct.pack("<B", 0xe8) + struct.pack(
-                        "<I", offset)
-                    raxv = Triton.getConcreteRegisterValue(
-                        Triton.registers.rax)
-                    print("raxv "+str(raxv))
-
                     for i in range(size):
-                        seed[0x1000 + i] = 10
-                        seed[0x1000 + i + 1] = 10
-
+                        seed[0x1000 + i] = 20
+                        seed[0x1000 + i + 1] = 20
             except:
                 print("setted error")
                 pass
 
             try:
-                socket_addr = gbinary.get_function_address("socket")
-                if socket_addr == faddr:
-                    Triton.setConcreteRegisterValue(Triton.registers.rax,
-                                                    0x1)
-                    pc += 5
-                    continue
-            except:
-                pass
-
-            try:
-                setsocket_addr = gbinary.get_function_address("setsockopt")
-                if setsocket_addr == faddr:
-                    Triton.setConcreteRegisterValue(Triton.registers.rax,
-                                                    0x0)
-                    pc += 5
-                    continue
-            except:
-                pass
-
-            try:
-                bind_addr = gbinary.get_function_address("bind")
-                if bind_addr == faddr:
-                    Triton.setConcreteRegisterValue(Triton.registers.rax,
-                                                    0x0)
-                    pc += 5
-                    continue
-            except:
-                pass
-
-            try:
-                listen_addr = gbinary.get_function_address("listen")
-                if listen_addr == faddr:
-                    Triton.setConcreteRegisterValue(Triton.registers.rax,
-                                                    0x0)
-                    pc += 5
-                    continue
-            except:
-                pass
-
-            try:
-                send_addr = gbinary.get_function_address("send")
-                if send_addr == faddr:
-                    Triton.setConcreteRegisterValue(Triton.registers.rax,
-                                                    0x1)
+                fclose_addr = gbinary.get_function_address("fclose")
+                if fclose_addr == faddr:
                     pc += 5
                     continue
             except:
@@ -232,12 +181,13 @@ def run(pc, seed):
                 pass
 
             try:
-                fputc_addr = gbinary.get_function_address("fputc")
-                if fputc_addr == faddr:
+                putchar_addr = gbinary.get_function_address("putchar")
+                if putchar_addr == faddr:
                     pc += 5
                     continue
             except:
                 pass
+
 
             try:
                 fputchar_addr = gbinary.get_function_address("fputchar")
@@ -246,7 +196,6 @@ def run(pc, seed):
                     continue
             except:
                 pass
-
             try:
                 fputs_addr = gbinary.get_function_address("fputs")
                 if fputs_addr == faddr:
@@ -254,20 +203,29 @@ def run(pc, seed):
                     continue
             except:
                 pass
-
             try:
-                puts_addr = gbinary.get_function_address("puts")
-                if puts_addr == faddr:
+                fputs_addr = gbinary.get_function_address("puts")
+                if fputs_addr == faddr:
                     pc += 5
                     continue
             except:
                 pass
+
 
             try:
                 fwrite_addr = gbinary.get_function_address("fwrite")
                 if fwrite_addr == faddr:
                     pc += 5
                     continue
+            except:
+                pass
+
+
+            try:
+                exit_addr = gbinary.get_function_address("exit")
+                if exit_addr == faddr:
+                    print("calling exit")
+                    break
             except:
                 pass
 
@@ -297,7 +255,6 @@ def run(pc, seed):
                 if call_stack[-1] in addr_spec:
                     raxv=Triton.getConcreteRegisterValue(Triton.registers.rax)
                     if satisfy(raxv,addr_spec[call_stack[-1]]):
-                        print("satisfy")
                         func_error_seed[call_stack[-1]]=prev_seed
                 call_stack.pop(-1)
 
@@ -318,6 +275,19 @@ def satisfy(value,sp):
     if sp[0] == '!=':
         return value!=sp[1]
 
+def fix_keys(j):
+    for k in copy.copy(j):
+        j[int(k)] = j[k]
+        j.pop(k)
+
+class hdict(dict):
+  def __key(self):
+    return tuple((k,self[k]) for k in sorted(self))
+  def __hash__(self):
+    return hash(self.__key())
+  def __eq__(self, other):
+    return self.__key() == other.__key()
+
 def simulate():
     global addr_spec,addr_func
     Triton.setArchitecture(ARCH.X86_64)
@@ -336,7 +306,8 @@ def simulate():
     for func in func_spec:
         addr_func[gbinary.get_function_address(func)]=func
 
-    lastInput = list()
+
+    lastInput =pybloomfilter.BloomFilter(100000,0.001,b'filter.bloom')
 
     run(ENTRY, {})
     worklist = [{}]
@@ -351,23 +322,26 @@ def simulate():
             break
 
         seed = worklist[0]
+        print("seed: " + str(seed))
 
         symbolizeInputs(seed)
 
         initContext()
 
-        lastInput += [dict(seed)]
+        lastInput.add(hdict(seed))
         del worklist[0]
         run(ENTRY, seed)
-        print("seed: " + str(seed))
 
-        if seed not in lastInput and seed not in worklist:
+        if hdict(seed) not in lastInput and seed not in worklist:
             worklist.append(seed)
 
         newInputs = getNewInput()
         for inputs in newInputs:
-            if inputs not in lastInput and inputs not in worklist:
-                worklist += [dict(inputs)]
+            if hdict(inputs) not in lastInput and inputs not in worklist:
+                worklist.append(dict(inputs))
+        print("seed "+str(len(worklist)))
+
+
 
 simulate()
 ret={}
